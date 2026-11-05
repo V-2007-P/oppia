@@ -76,6 +76,21 @@ export class ContributorAdmin extends BaseUser {
         tabSelectionDropdownMobileSelector,
         modifiedName
       );
+      await this.page.waitForSelector(
+        '.cdk-overlay-container .mat-select-panel',
+        {hidden: true}
+      );
+      if (tabName.includes('Submitter')) {
+        await this.expectTextContentToBe(
+          addContributorButtonSelector,
+          '+ ADD SUBMITTER'
+        );
+      } else if (tabName.includes('Reviewer')) {
+        await this.expectTextContentToBe(
+          addContributorButtonSelector,
+          '+ ADD REVIEWER'
+        );
+      }
     } else {
       const tabNameInLowerCase = tabName.toLocaleLowerCase().replace(' ', '-');
       const tabSelector = `.e2e-test-${tabNameInLowerCase}-tab`;
@@ -159,12 +174,79 @@ export class ContributorAdmin extends BaseUser {
    */
   async expectNumberOfStatsRowsToBe(number: number): Promise<void> {
     await this.page.waitForFunction(
-      (selector: string, expectedCount: number) => {
-        const rows = document.querySelectorAll(selector);
+      (
+        tableSelector: string,
+        rowSelector: string,
+        loadingSelector: string,
+        expectedCount: number
+      ) => {
+        const loading = document.querySelector(loadingSelector);
+        if (loading) {
+          return false;
+        }
+        if (expectedCount === 0) {
+          const rows = document.querySelectorAll(rowSelector);
+          return rows.length === 0;
+        }
+        const table = document.querySelector(tableSelector);
+        if (!table) {
+          return false;
+        }
+        const rows = document.querySelectorAll(rowSelector);
         return rows.length === expectedCount;
       },
       {},
+      statsTableSelector,
       statsListItemSelector,
+      '.e2e-test-loading-message',
+      number
+    );
+  }
+
+  /**
+   * Checks if the contributor stats table has loaded rows specifically for the given tab.
+   * @param {string} tabName - The name of the tab (e.g. 'Question Reviewer', 'Question Submitter').
+   * @param {number} number - The expected number of stats rows.
+   */
+  async expectNumberOfStatsRowsForTabToBe(
+    tabName: string,
+    number: number
+  ): Promise<void> {
+    await this.page.waitForFunction(
+      (
+        tableSelector: string,
+        rowSelector: string,
+        loadingSelector: string,
+        expectedTab: string,
+        expectedCount: number
+      ) => {
+        const loading = document.querySelector(loadingSelector);
+        if (loading) {
+          return false;
+        }
+        if (expectedCount === 0) {
+          const rows = document.querySelectorAll(rowSelector);
+          return rows.length === 0;
+        }
+        const table = document.querySelector(tableSelector);
+        if (!table) {
+          return false;
+        }
+        const rows = document.querySelectorAll(rowSelector);
+        if (rows.length !== expectedCount) {
+          return false;
+        }
+        const header = table.querySelector('th.user-header');
+        if (!header || !header.textContent?.includes(expectedTab)) {
+          return false;
+        }
+        return true;
+      },
+      {},
+      statsTableSelector,
+      statsListItemSelector,
+      '.e2e-test-loading-message',
+      tabName,
       number
     );
   }

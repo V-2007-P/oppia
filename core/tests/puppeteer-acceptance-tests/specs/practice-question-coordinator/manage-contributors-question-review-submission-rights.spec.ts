@@ -141,19 +141,34 @@ describe('Practice Question Coordinator', function () {
 
     // Verify contributor count on question submitter and reviewer tabs.
     await questionCoordinator.page.reload();
-    await questionCoordinator.expectNumberOfStatsRowsToBe(1);
+    await questionCoordinator.expectNumberOfStatsRowsForTabToBe(
+      'Question Submitter',
+      1
+    );
     await questionCoordinator.setLastActivityDateFilterToYesterday();
-    await questionCoordinator.expectNumberOfStatsRowsToBe(1);
+    await questionCoordinator.expectNumberOfStatsRowsForTabToBe(
+      'Question Submitter',
+      1
+    );
 
     await questionCoordinator.switchToTabInContributorAdminPage(
       'Question Reviewers'
     );
-    await questionCoordinator.expectNumberOfStatsRowsToBe(1);
+    await questionCoordinator.expectNumberOfStatsRowsForTabToBe(
+      'Question Reviewer',
+      1
+    );
     await questionCoordinator.setLastActivityDateFilterToYesterday();
-    await questionCoordinator.expectNumberOfStatsRowsToBe(1);
+    await questionCoordinator.expectNumberOfStatsRowsForTabToBe(
+      'Question Reviewer',
+      1
+    );
   });
 
   it('should be able to remove question submitter rights for a user', async function () {
+    if (questionCoordinator.isViewportAtMobileWidth()) {
+      await questionCoordinator.scrollToBottomOfPage();
+    }
     await questionCoordinator.clickOnAddReviewerOrSubmitterButton();
     await questionCoordinator.addUsernameInUsernameInputModal(
       questionSubmitter.username ?? ''
@@ -172,6 +187,9 @@ describe('Practice Question Coordinator', function () {
   });
 
   it('should be able to remove question review rights for a user', async function () {
+    if (questionCoordinator.isViewportAtMobileWidth()) {
+      await questionCoordinator.scrollToBottomOfPage();
+    }
     await questionCoordinator.clickOnAddReviewerOrSubmitterButton();
     await questionCoordinator.addUsernameInUsernameInputModal(
       questionReviewer.username ?? ''

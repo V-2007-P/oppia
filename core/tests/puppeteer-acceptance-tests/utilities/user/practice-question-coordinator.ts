@@ -73,6 +73,7 @@ export class QuestionCoordinator extends BaseUser {
    */
   async expectQuestionRoleEditorModalToBeVisible(): Promise<void> {
     await this.expectElementToBeVisible(questionRoleEditorModalSelector);
+    await this.waitForElementToStabilize(questionRoleEditorModalSelector);
   }
 
   /**
