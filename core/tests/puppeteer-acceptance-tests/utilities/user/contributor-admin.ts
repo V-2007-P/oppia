@@ -18,6 +18,7 @@
  */
 
 import {BaseUser} from '../common/puppeteer-utils';
+import {showMessage} from '../common/show-message';
 import testConstants from '../common/test-constants';
 
 const ContributorDashboardAdminUrl =
@@ -149,6 +150,68 @@ export class ContributorAdmin extends BaseUser {
   }
 
   /**
+   * Logs detailed viewport and date-picker element metrics for debugging.
+   * @param {string} stage - The description of the current stage.
+   * @param {string} dateInputSelector - The selector for the date input.
+   */
+  async logDatePickerAndViewportMetrics(
+    stage: string,
+    dateInputSelector?: string
+  ): Promise<void> {
+    const selector =
+      dateInputSelector ??
+      (this.isViewportAtMobileWidth()
+        ? mobileLastDatePickerInputSelector
+        : lastDatePickerInputSelector);
+
+    const metrics = await this.page.evaluate((sel: string) => {
+      const el = document.querySelector(sel);
+      const rect = el ? el.getBoundingClientRect() : null;
+      const scrollY = window.scrollY;
+      const docTop = rect ? rect.top + scrollY : null;
+      const docBottom = rect ? rect.bottom + scrollY : null;
+      const vv = window.visualViewport;
+
+      return {
+        innerHeight: window.innerHeight,
+        clientHeight: document.documentElement.clientHeight,
+        visualViewportHeight: vv ? vv.height : null,
+        visualViewportOffsetTop: vv ? vv.offsetTop : null,
+        devicePixelRatio: window.devicePixelRatio,
+        screenHeight: window.screen.height,
+        scrollingElementScrollHeight: document.scrollingElement
+          ? document.scrollingElement.scrollHeight
+          : null,
+        scrollY: scrollY,
+        elementFound: Boolean(el),
+        rectTop: rect ? rect.top : null,
+        rectBottom: rect ? rect.bottom : null,
+        rectHeight: rect ? rect.height : null,
+        docTop: docTop,
+        docBottom: docBottom,
+      };
+    }, selector);
+
+    showMessage(
+      `[ViewportDiagnostics] ${stage}: ` +
+        `window.innerHeight=${metrics.innerHeight}, ` +
+        `document.documentElement.clientHeight=${metrics.clientHeight}, ` +
+        `window.visualViewport?.height=${metrics.visualViewportHeight}, ` +
+        `window.visualViewport?.offsetTop=${metrics.visualViewportOffsetTop}, ` +
+        `window.devicePixelRatio=${metrics.devicePixelRatio}, ` +
+        `window.screen.height=${metrics.screenHeight}, ` +
+        `document.scrollingElement?.scrollHeight=${metrics.scrollingElementScrollHeight}, ` +
+        `window.scrollY=${metrics.scrollY}, ` +
+        `datePickerFound=${metrics.elementFound}, ` +
+        `datePicker.rect.top=${metrics.rectTop}, ` +
+        `datePicker.rect.bottom=${metrics.rectBottom}, ` +
+        `datePicker.rect.height=${metrics.rectHeight}, ` +
+        `datePicker.docTop=${metrics.docTop}, ` +
+        `datePicker.docBottom=${metrics.docBottom}.`
+    );
+  }
+
+  /**
    * Sets the "last activity" date filter to yesterday.
    */
   async setLastActivityDateFilterToYesterday(): Promise<void> {
@@ -162,10 +225,26 @@ export class ContributorAdmin extends BaseUser {
       ? mobileLastDatePickerInputSelector
       : lastDatePickerInputSelector;
 
+    await this.logDatePickerAndViewportMetrics(
+      'setLastActivityDateFilterToYesterday before clearAllTextFrom',
+      dateInputSelector
+    );
     await this.clearAllTextFrom(dateInputSelector);
+    await this.logDatePickerAndViewportMetrics(
+      'setLastActivityDateFilterToYesterday immediately after clearAllTextFrom',
+      dateInputSelector
+    );
     await this.typeInInputField(dateInputSelector, yesterdayDate);
+    await this.logDatePickerAndViewportMetrics(
+      'setLastActivityDateFilterToYesterday immediately after typeInInputField',
+      dateInputSelector
+    );
     await this.page.keyboard.press('Enter');
     await this.expectElementValueToBe(dateInputSelector, yesterdayDate);
+    await this.logDatePickerAndViewportMetrics(
+      'setLastActivityDateFilterToYesterday immediately after pressing Enter and completing filter operation',
+      dateInputSelector
+    );
   }
 
   /**

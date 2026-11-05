@@ -19,7 +19,6 @@
  * QC.1. Manage contributors' question review/submission rights.
  */
 
-import {showMessage} from '../../utilities/common/show-message';
 import testConstants from '../../utilities/common/test-constants';
 import {UserFactory} from '../../utilities/common/user-factory';
 import {Contributor} from '../../utilities/user/contributor';
@@ -45,25 +44,7 @@ describe('Practice Question Coordinator', function () {
   let releaseCoordinator: ReleaseCoordinator;
 
   const logScrollMetrics = async function (context: string): Promise<void> {
-    const metrics = await questionCoordinator.page.evaluate(() => {
-      const scrollHeight = Math.max(
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight
-      );
-      const maxScroll = Math.max(0, scrollHeight - window.innerHeight);
-      return {
-        scrollY: window.scrollY,
-        maxScroll: maxScroll,
-        scrollHeight: scrollHeight,
-        innerHeight: window.innerHeight,
-      };
-    });
-    showMessage(
-      `[ScrollMetrics] ${context}: scrollY=${metrics.scrollY}, ` +
-        `maxScroll=${metrics.maxScroll}, ` +
-        `scrollHeight=${metrics.scrollHeight}, ` +
-        `innerHeight=${metrics.innerHeight}.`
-    );
+    await questionCoordinator.logDatePickerAndViewportMetrics(context);
   };
 
   beforeAll(async function () {
