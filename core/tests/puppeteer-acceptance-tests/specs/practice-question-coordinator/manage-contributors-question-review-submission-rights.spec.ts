@@ -43,10 +43,6 @@ describe('Practice Question Coordinator', function () {
     LoggedInUser;
   let releaseCoordinator: ReleaseCoordinator;
 
-  const logScrollMetrics = async function (context: string): Promise<void> {
-    await questionCoordinator.logDatePickerAndViewportMetrics(context);
-  };
-
   beforeAll(async function () {
     questionCoordinator = await UserFactory.createNewUser(
       'questionCoordinator',
@@ -167,24 +163,17 @@ describe('Practice Question Coordinator', function () {
       'Question Reviewer',
       1
     );
-    await logScrollMetrics(
-      'Test 2 after reviewer table loaded and date filter completed'
-    );
   });
 
   it('should be able to remove question submitter rights for a user', async function () {
-    await logScrollMetrics(
-      'Test 3 immediately before clicking Add Reviewer button'
-    );
+    if (questionCoordinator.isViewportAtMobileWidth()) {
+      await questionCoordinator.scrollToTopOfPage();
+    }
     await questionCoordinator.clickOnAddReviewerOrSubmitterButton();
-    await logScrollMetrics(
-      'Test 3 immediately after clicking Add Reviewer button'
-    );
     await questionCoordinator.addUsernameInUsernameInputModal(
       questionSubmitter.username ?? ''
     );
     await questionCoordinator.expectQuestionRoleEditorModalToBeVisible();
-    await logScrollMetrics('Test 3 immediately before screenshot assertion');
     await questionCoordinator.expectScreenshotToMatch(
       'editQuestionRightsModalWithSubmitterChecked',
       __dirname
@@ -198,6 +187,9 @@ describe('Practice Question Coordinator', function () {
   });
 
   it('should be able to remove question review rights for a user', async function () {
+    if (questionCoordinator.isViewportAtMobileWidth()) {
+      await questionCoordinator.scrollToTopOfPage();
+    }
     await questionCoordinator.clickOnAddReviewerOrSubmitterButton();
     await questionCoordinator.addUsernameInUsernameInputModal(
       questionReviewer.username ?? ''
