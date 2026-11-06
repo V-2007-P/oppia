@@ -1315,6 +1315,27 @@ export class BaseUser {
   ): Promise<void> {
     const specName = process.env.SPEC_NAME;
     const currentPage = typeof newPage !== 'undefined' ? newPage : this.page;
+    if (this.isViewportAtMobileWidth()) {
+      await currentPage.bringToFront();
+      await currentPage.evaluate(() => {
+        if (
+          document.activeElement &&
+          typeof (document.activeElement as HTMLElement).blur === 'function'
+        ) {
+          (document.activeElement as HTMLElement).blur();
+        }
+        window.scrollTo(0, 0);
+        if (document.scrollingElement !== null) {
+          document.scrollingElement.scrollTop = 0;
+        }
+        if (document.documentElement !== null) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body !== null) {
+          document.body.scrollTop = 0;
+        }
+      });
+    }
     await currentPage.mouse.move(0, 0);
     // To wait for all images to load and the page to be stable.
     await currentPage.waitForTimeout(5000);
@@ -1322,12 +1343,16 @@ export class BaseUser {
     // Disable all CSS transitions and animations before taking the
     // screenshot to prevent snapshot mismatches caused by transitions
     // being mid-way when the screenshot is captured.
+    const mobileOverflowRule = this.isViewportAtMobileWidth()
+      ? 'html, body { overflow: hidden !important; }'
+      : '';
     const styleHandle = await currentPage.addStyleTag({
       content: `
         *, *::before, *::after {
           transition: none !important;
           animation: none !important;
         }
+        ${mobileOverflowRule}
       `,
     });
 
@@ -1499,6 +1524,17 @@ export class BaseUser {
       }
 
       const screenshot = await currentPage.screenshot(screenshotOptions);
+      if (this.isViewportAtMobileWidth()) {
+        const postScreenshotScrollY = await currentPage.evaluate(
+          () => window.scrollY
+        );
+        if (postScreenshotScrollY !== 0) {
+          throw new Error(
+            `[PostScreenshotCheckpoint] Mobile scroll offset shifted during screenshot "${imageName}". ` +
+              `Expected scroll offset 0, but received window.scrollY=${postScreenshotScrollY}.`
+          );
+        }
+      }
       expect(screenshot).toMatchImageSnapshot({
         failureThreshold: failureTrigger,
         failureThresholdType: 'percent',
@@ -1529,7 +1565,8 @@ export class BaseUser {
     } catch (error) {
       if (
         error instanceof Error &&
-        error.message.startsWith('[PreScreenshotCheckpoint]')
+        (error.message.startsWith('[PreScreenshotCheckpoint]') ||
+          error.message.startsWith('[PostScreenshotCheckpoint]'))
       ) {
         throw error;
       }

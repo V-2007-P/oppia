@@ -105,6 +105,7 @@ export class QuestionCoordinator extends BaseUser {
     await this.expectElementToBeVisible(questionRoleEditorModalSelector);
     await this.waitForElementToStabilize(questionRoleEditorModalSelector);
     if (this.isViewportAtMobileWidth()) {
+      await this.page.bringToFront();
       // Capture diagnostic state before normalization.
       const before = await this.page.evaluate((): DiagnosticMetrics => {
         const body = document.body;
@@ -193,12 +194,22 @@ export class QuestionCoordinator extends BaseUser {
       // visible behind the modal backdrop are deterministically positioned.
       const after = await this.page.evaluate(
         async (): Promise<DiagnosticMetrics> => {
+          if (
+            document.activeElement &&
+            typeof (document.activeElement as HTMLElement).blur === 'function'
+          ) {
+            (document.activeElement as HTMLElement).blur();
+          }
           window.scrollTo(0, 0);
-          if (document.scrollingElement) {
+          if (document.scrollingElement !== null) {
             document.scrollingElement.scrollTop = 0;
           }
-          document.documentElement.scrollTop = 0;
-          document.body.scrollTop = 0;
+          if (document.documentElement !== null) {
+            document.documentElement.scrollTop = 0;
+          }
+          if (document.body !== null) {
+            document.body.scrollTop = 0;
+          }
 
           // Verify that the scroll position remains stable across animation frames.
           await new Promise<void>(resolve => {
