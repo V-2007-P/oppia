@@ -115,6 +115,7 @@ describe('Practice Question Coordinator', function () {
       questionSubmitter.username ?? ''
     );
     await questionCoordinator.expectQuestionRoleEditorModalToBeVisible();
+    await questionCoordinator.scrollToTopOfPage();
     await questionCoordinator.expectScreenshotToMatch(
       'addQuestionRightsModal',
       __dirname
@@ -158,6 +159,7 @@ describe('Practice Question Coordinator', function () {
       questionSubmitter.username ?? ''
     );
     await questionCoordinator.expectQuestionRoleEditorModalToBeVisible();
+    await questionCoordinator.scrollToTopOfPage();
     await questionCoordinator.expectScreenshotToMatch(
       'editQuestionRightsModalWithSubmitterChecked',
       __dirname
@@ -176,6 +178,7 @@ describe('Practice Question Coordinator', function () {
       questionReviewer.username ?? ''
     );
     await questionCoordinator.expectQuestionRoleEditorModalToBeVisible();
+    await questionCoordinator.scrollToTopOfPage();
     await questionCoordinator.expectScreenshotToMatch(
       'editQuestionRightsModalWithReviewerChecked',
       __dirname
