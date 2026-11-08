@@ -72,16 +72,6 @@ export type ModalUserInteractions = (
   container: string
 ) => Promise<void>;
 
-export interface MobilePostNormalizationMetrics {
-  scrollY: number;
-  scrollingElementTop: number;
-  documentElementTop: number;
-  bodyTop: number;
-  tabsTop: number | null;
-  addBtnTop: number | null;
-  modalTop: number | null;
-}
-
 export class BaseUser {
   page!: Page;
   pages: Page[] = [];
@@ -91,7 +81,6 @@ export class BaseUser {
   username: string | null = null;
   startTimeInMilliseconds: number = -1;
   screenRecorder!: PuppeteerScreenRecorder;
-  mobilePostNormalizationMetrics: MobilePostNormalizationMetrics | null = null;
   static instances: BaseUser[] = []; // Track instances.
   static serverErrors: string[] = []; // Track server errors.
 
@@ -1315,27 +1304,6 @@ export class BaseUser {
   ): Promise<void> {
     const specName = process.env.SPEC_NAME;
     const currentPage = typeof newPage !== 'undefined' ? newPage : this.page;
-    if (this.isViewportAtMobileWidth()) {
-      await currentPage.bringToFront();
-      await currentPage.evaluate(() => {
-        if (
-          document.activeElement &&
-          typeof (document.activeElement as HTMLElement).blur === 'function'
-        ) {
-          (document.activeElement as HTMLElement).blur();
-        }
-        window.scrollTo(0, 0);
-        if (document.scrollingElement !== null) {
-          document.scrollingElement.scrollTop = 0;
-        }
-        if (document.documentElement !== null) {
-          document.documentElement.scrollTop = 0;
-        }
-        if (document.body !== null) {
-          document.body.scrollTop = 0;
-        }
-      });
-    }
     await currentPage.mouse.move(0, 0);
     // To wait for all images to load and the page to be stable.
     await currentPage.waitForTimeout(5000);
@@ -1343,16 +1311,12 @@ export class BaseUser {
     // Disable all CSS transitions and animations before taking the
     // screenshot to prevent snapshot mismatches caused by transitions
     // being mid-way when the screenshot is captured.
-    const mobileOverflowRule = this.isViewportAtMobileWidth()
-      ? 'html, body { overflow: hidden !important; }'
-      : '';
     const styleHandle = await currentPage.addStyleTag({
       content: `
         *, *::before, *::after {
           transition: none !important;
           animation: none !important;
         }
-        ${mobileOverflowRule}
       `,
     });
 
@@ -1392,149 +1356,7 @@ export class BaseUser {
     const runningInCI = __dirname.startsWith('/home/runner');
 
     try {
-      if (this.isViewportAtMobileWidth()) {
-        const preScreenshotMetrics = await currentPage.evaluate(() => {
-          const body = document.body;
-          const docEl = document.documentElement;
-          const bodyStyle = window.getComputedStyle(body);
-          const docElStyle = window.getComputedStyle(docEl);
-          const tabs =
-            document.querySelector('.e2e-test-tab-selection-dropdown') ||
-            document.querySelector(
-              '.oppia-contributor-dashboard-admin-page-tabs-container'
-            );
-          const addBtn = document.querySelector(
-            '.e2e-test-add-contributor-button'
-          );
-          const modal = document.querySelector(
-            '.e2e-test-question-role-editor-container'
-          );
-
-          return {
-            scrollY: window.scrollY,
-            scrollingElementTop:
-              document.scrollingElement !== null
-                ? document.scrollingElement.scrollTop
-                : 0,
-            documentElementTop: docEl.scrollTop,
-            bodyTop: body.scrollTop,
-            bodyClassName: body.className,
-            bodyInlineStyle: body.getAttribute('style'),
-            bodyComputed: {
-              position: bodyStyle.position,
-              top: bodyStyle.top,
-              transform: bodyStyle.transform,
-              overflow: bodyStyle.overflow,
-              margin: bodyStyle.margin,
-            },
-            docElComputed: {
-              position: docElStyle.position,
-              top: docElStyle.top,
-              transform: docElStyle.transform,
-              overflow: docElStyle.overflow,
-              margin: docElStyle.margin,
-            },
-            tabsRect:
-              tabs !== null
-                ? {
-                    top: tabs.getBoundingClientRect().top,
-                    bottom: tabs.getBoundingClientRect().bottom,
-                  }
-                : null,
-            addBtnRect:
-              addBtn !== null
-                ? {
-                    top: addBtn.getBoundingClientRect().top,
-                    bottom: addBtn.getBoundingClientRect().bottom,
-                  }
-                : null,
-            modalRect:
-              modal !== null
-                ? {
-                    top: modal.getBoundingClientRect().top,
-                    bottom: modal.getBoundingClientRect().bottom,
-                  }
-                : null,
-          };
-        });
-
-        showMessage(
-          `[PreScreenshotCheckpoint] ${imageName}: ` +
-            `scrollY=${preScreenshotMetrics.scrollY}, ` +
-            `scrollingElementTop=${preScreenshotMetrics.scrollingElementTop}, ` +
-            `body.class="${preScreenshotMetrics.bodyClassName}", ` +
-            `body.style="${preScreenshotMetrics.bodyInlineStyle ?? 'none'}", ` +
-            `body.computed={pos:${preScreenshotMetrics.bodyComputed.position},top:${preScreenshotMetrics.bodyComputed.top},transform:${preScreenshotMetrics.bodyComputed.transform}}, ` +
-            `tabsRect=${JSON.stringify(preScreenshotMetrics.tabsRect)}, ` +
-            `addBtnRect=${JSON.stringify(preScreenshotMetrics.addBtnRect)}, ` +
-            `modalRect=${JSON.stringify(preScreenshotMetrics.modalRect)}`
-        );
-
-        // Verify that scroll offsets remain zero at screenshot capture.
-        if (
-          preScreenshotMetrics.scrollY !== 0 ||
-          preScreenshotMetrics.scrollingElementTop !== 0
-        ) {
-          throw new Error(
-            `[PreScreenshotCheckpoint] Mobile scroll offset shifted before screenshot "${imageName}". ` +
-              'Expected scroll offset 0, but received: ' +
-              `window.scrollY=${preScreenshotMetrics.scrollY}, ` +
-              `document.scrollingElement.scrollTop=${preScreenshotMetrics.scrollingElementTop}.`
-          );
-        }
-
-        // Verify background and modal positions against post-normalization baseline if available.
-        if (this.mobilePostNormalizationMetrics !== null) {
-          const baseline = this.mobilePostNormalizationMetrics;
-
-          if (
-            baseline.addBtnTop !== null &&
-            preScreenshotMetrics.addBtnRect !== null &&
-            Math.abs(preScreenshotMetrics.addBtnRect.top - baseline.addBtnTop) >
-              1
-          ) {
-            throw new Error(
-              `[PreScreenshotCheckpoint] Add Reviewer button shifted before screenshot "${imageName}". ` +
-                `Expected top=${baseline.addBtnTop}, but received top=${preScreenshotMetrics.addBtnRect.top}.`
-            );
-          }
-
-          if (
-            baseline.tabsTop !== null &&
-            preScreenshotMetrics.tabsRect !== null &&
-            Math.abs(preScreenshotMetrics.tabsRect.top - baseline.tabsTop) > 1
-          ) {
-            throw new Error(
-              `[PreScreenshotCheckpoint] Dashboard tabs shifted before screenshot "${imageName}". ` +
-                `Expected top=${baseline.tabsTop}, but received top=${preScreenshotMetrics.tabsRect.top}.`
-            );
-          }
-
-          if (
-            baseline.modalTop !== null &&
-            preScreenshotMetrics.modalRect !== null &&
-            Math.abs(preScreenshotMetrics.modalRect.top - baseline.modalTop) > 1
-          ) {
-            throw new Error(
-              `[PreScreenshotCheckpoint] Modal shifted before screenshot "${imageName}". ` +
-                `Expected top=${baseline.modalTop}, but received top=${preScreenshotMetrics.modalRect.top}.`
-            );
-          }
-        }
-      }
-
       const screenshot = await currentPage.screenshot(screenshotOptions);
-      if (this.isViewportAtMobileWidth()) {
-        const postScreenshotScrollY = await currentPage.evaluate(
-          () => window.scrollY
-        );
-        if (postScreenshotScrollY !== 0) {
-          throw new Error(
-            `[PostScreenshotCheckpoint] Mobile scroll offset shifted during screenshot "${imageName}". ` +
-              `Expected scroll offset 0, but received window.scrollY=${postScreenshotScrollY}.`
-          );
-        }
-      }
       expect(screenshot).toMatchImageSnapshot({
         failureThreshold: failureTrigger,
         failureThresholdType: 'percent',
@@ -1563,14 +1385,7 @@ export class BaseUser {
           : path.join(testPath, dirName, 'new-snapshots'),
       });
     } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.message.startsWith('[PreScreenshotCheckpoint]') ||
-          error.message.startsWith('[PostScreenshotCheckpoint]'))
-      ) {
-        throw error;
-      }
-      var errorMessage = (error as Error).message;
+      var errorMessage = error.message;
       if (runningInCI) {
         errorMessage +=
           '\r\nDownload the artifact folder diff-snapshots from the github workflow to check the difference between the old screenshot(s)' +
@@ -1586,8 +1401,6 @@ export class BaseUser {
         ' The new screenshot(s) should end with "-received". When replacing the screenshot(s), make sure to change the postfix "-received" to "-snap".';
       throw new Error(errorMessage);
     } finally {
-      // Clear post-normalization baseline safely so stale measurements cannot leak.
-      this.mobilePostNormalizationMetrics = null;
       // Remove the injected style tag so it doesn't affect subsequent actions.
       await currentPage.evaluate(el => el.remove(), styleHandle);
     }

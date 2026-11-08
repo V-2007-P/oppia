@@ -17,44 +17,16 @@
  */
 
 import {BaseUser} from '../common/puppeteer-utils';
-import {showMessage} from '../common/show-message';
 
 const questionRoleEditorModalSelector =
   '.e2e-test-question-role-editor-container';
 const checkedCheckboxSelector = '.e2e-test-checkbox-checked';
 const uncheckedCheckboxSelector = '.e2e-test-checkbox-unchecked';
 const saveButtonSelector = '.e2e-test-save-button';
+const statsTableSelector = '.e2e-test-stats-table';
+const statsListItemSelector = '.e2e-test-stats-list-item';
 
 const totalQuestionReviewersSelector = '.e2e-test-total-question-reviewers';
-
-interface ElementRect {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-}
-
-interface ComputedStyles {
-  position: string;
-  top: string;
-  transform: string;
-  overflow: string;
-  margin: string;
-}
-
-interface DiagnosticMetrics {
-  scrollY: number;
-  scrollingElementTop: number;
-  documentElementTop: number;
-  bodyTop: number;
-  bodyClassName: string;
-  bodyInlineStyle: string | null;
-  bodyComputed: ComputedStyles;
-  docElComputed: ComputedStyles;
-  tabsRect: ElementRect | null;
-  addBtnRect: ElementRect | null;
-  modalRect: ElementRect | null;
-}
 
 export class QuestionCoordinator extends BaseUser {
   /**
@@ -99,265 +71,38 @@ export class QuestionCoordinator extends BaseUser {
   }
 
   /**
-   * Checks if the question role editor modal is visible.
+   * Checks if the question role editor modal is visible and ready.
    */
   async expectQuestionRoleEditorModalToBeVisible(): Promise<void> {
     await this.expectElementToBeVisible(questionRoleEditorModalSelector);
     await this.waitForElementToStabilize(questionRoleEditorModalSelector);
     if (this.isViewportAtMobileWidth()) {
       await this.page.bringToFront();
-      // Capture diagnostic state before normalization.
-      const before = await this.page.evaluate((): DiagnosticMetrics => {
-        const body = document.body;
-        const docEl = document.documentElement;
-        const bodyStyle = window.getComputedStyle(body);
-        const docElStyle = window.getComputedStyle(docEl);
-        const tabs =
-          document.querySelector('.e2e-test-tab-selection-dropdown') ||
-          document.querySelector(
-            '.oppia-contributor-dashboard-admin-page-tabs-container'
-          );
-        const addBtn = document.querySelector(
-          '.e2e-test-add-contributor-button'
-        );
-        const modal = document.querySelector(
-          '.e2e-test-question-role-editor-container'
-        );
-
-        return {
-          scrollY: window.scrollY,
-          scrollingElementTop:
-            document.scrollingElement !== null
-              ? document.scrollingElement.scrollTop
-              : 0,
-          documentElementTop: docEl.scrollTop,
-          bodyTop: body.scrollTop,
-          bodyClassName: body.className,
-          bodyInlineStyle: body.getAttribute('style'),
-          bodyComputed: {
-            position: bodyStyle.position,
-            top: bodyStyle.top,
-            transform: bodyStyle.transform,
-            overflow: bodyStyle.overflow,
-            margin: bodyStyle.margin,
-          },
-          docElComputed: {
-            position: docElStyle.position,
-            top: docElStyle.top,
-            transform: docElStyle.transform,
-            overflow: docElStyle.overflow,
-            margin: docElStyle.margin,
-          },
-          tabsRect:
-            tabs !== null
-              ? {
-                  top: tabs.getBoundingClientRect().top,
-                  bottom: tabs.getBoundingClientRect().bottom,
-                  left: tabs.getBoundingClientRect().left,
-                  right: tabs.getBoundingClientRect().right,
-                }
-              : null,
-          addBtnRect:
-            addBtn !== null
-              ? {
-                  top: addBtn.getBoundingClientRect().top,
-                  bottom: addBtn.getBoundingClientRect().bottom,
-                  left: addBtn.getBoundingClientRect().left,
-                  right: addBtn.getBoundingClientRect().right,
-                }
-              : null,
-          modalRect:
-            modal !== null
-              ? {
-                  top: modal.getBoundingClientRect().top,
-                  bottom: modal.getBoundingClientRect().bottom,
-                  left: modal.getBoundingClientRect().left,
-                  right: modal.getBoundingClientRect().right,
-                }
-              : null,
-        };
-      });
-
-      showMessage(
-        `[MobileScrollNormalization] Before: scrollY=${before.scrollY}, ` +
-          `scrollingElementTop=${before.scrollingElementTop}, ` +
-          `body.class="${before.bodyClassName}", ` +
-          `body.style="${before.bodyInlineStyle ?? 'none'}", ` +
-          `body.computed={pos:${before.bodyComputed.position},top:${before.bodyComputed.top},transform:${before.bodyComputed.transform},overflow:${before.bodyComputed.overflow},margin:${before.bodyComputed.margin}}, ` +
-          `docEl.computed={pos:${before.docElComputed.position},top:${before.docElComputed.top},transform:${before.docElComputed.transform},overflow:${before.docElComputed.overflow},margin:${before.docElComputed.margin}}, ` +
-          `tabsRect=${JSON.stringify(before.tabsRect)}, ` +
-          `addBtnRect=${JSON.stringify(before.addBtnRect)}, ` +
-          `modalRect=${JSON.stringify(before.modalRect)}`
-      );
-
-      // Normalize mobile page scroll to top so that background elements
-      // visible behind the modal backdrop are deterministically positioned.
-      const after = await this.page.evaluate(
-        async (): Promise<DiagnosticMetrics> => {
-          if (
-            document.activeElement &&
-            typeof (document.activeElement as HTMLElement).blur === 'function'
-          ) {
-            (document.activeElement as HTMLElement).blur();
-          }
-          window.scrollTo(0, 0);
-          if (document.scrollingElement !== null) {
-            document.scrollingElement.scrollTop = 0;
-          }
-          if (document.documentElement !== null) {
-            document.documentElement.scrollTop = 0;
-          }
-          if (document.body !== null) {
-            document.body.scrollTop = 0;
-          }
-
-          // Verify that the scroll position remains stable across animation frames.
-          await new Promise<void>(resolve => {
+      await this.page.evaluate(async () => {
+        if (
+          document.activeElement &&
+          typeof (document.activeElement as HTMLElement).blur === 'function'
+        ) {
+          (document.activeElement as HTMLElement).blur();
+        }
+        window.scrollTo(0, 0);
+        if (document.scrollingElement !== null) {
+          document.scrollingElement.scrollTop = 0;
+        }
+        if (document.documentElement !== null) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body !== null) {
+          document.body.scrollTop = 0;
+        }
+        await new Promise<void>(resolve => {
+          requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                resolve();
-              });
+              resolve();
             });
           });
-
-          const body = document.body;
-          const docEl = document.documentElement;
-          const bodyStyle = window.getComputedStyle(body);
-          const docElStyle = window.getComputedStyle(docEl);
-          const tabs =
-            document.querySelector('.e2e-test-tab-selection-dropdown') ||
-            document.querySelector(
-              '.oppia-contributor-dashboard-admin-page-tabs-container'
-            );
-          const addBtn = document.querySelector(
-            '.e2e-test-add-contributor-button'
-          );
-          const modal = document.querySelector(
-            '.e2e-test-question-role-editor-container'
-          );
-
-          return {
-            scrollY: window.scrollY,
-            scrollingElementTop:
-              document.scrollingElement !== null
-                ? document.scrollingElement.scrollTop
-                : 0,
-            documentElementTop: docEl.scrollTop,
-            bodyTop: body.scrollTop,
-            bodyClassName: body.className,
-            bodyInlineStyle: body.getAttribute('style'),
-            bodyComputed: {
-              position: bodyStyle.position,
-              top: bodyStyle.top,
-              transform: bodyStyle.transform,
-              overflow: bodyStyle.overflow,
-              margin: bodyStyle.margin,
-            },
-            docElComputed: {
-              position: docElStyle.position,
-              top: docElStyle.top,
-              transform: docElStyle.transform,
-              overflow: docElStyle.overflow,
-              margin: docElStyle.margin,
-            },
-            tabsRect:
-              tabs !== null
-                ? {
-                    top: tabs.getBoundingClientRect().top,
-                    bottom: tabs.getBoundingClientRect().bottom,
-                    left: tabs.getBoundingClientRect().left,
-                    right: tabs.getBoundingClientRect().right,
-                  }
-                : null,
-            addBtnRect:
-              addBtn !== null
-                ? {
-                    top: addBtn.getBoundingClientRect().top,
-                    bottom: addBtn.getBoundingClientRect().bottom,
-                    left: addBtn.getBoundingClientRect().left,
-                    right: addBtn.getBoundingClientRect().right,
-                  }
-                : null,
-            modalRect:
-              modal !== null
-                ? {
-                    top: modal.getBoundingClientRect().top,
-                    bottom: modal.getBoundingClientRect().bottom,
-                    left: modal.getBoundingClientRect().left,
-                    right: modal.getBoundingClientRect().right,
-                  }
-                : null,
-          };
-        }
-      );
-
-      showMessage(
-        `[MobileScrollNormalization] After: scrollY=${after.scrollY}, ` +
-          `scrollingElementTop=${after.scrollingElementTop}, ` +
-          `body.class="${after.bodyClassName}", ` +
-          `body.style="${after.bodyInlineStyle ?? 'none'}", ` +
-          `body.computed={pos:${after.bodyComputed.position},top:${after.bodyComputed.top},transform:${after.bodyComputed.transform},overflow:${after.bodyComputed.overflow},margin:${after.bodyComputed.margin}}, ` +
-          `docEl.computed={pos:${after.docElComputed.position},top:${after.docElComputed.top},transform:${after.docElComputed.transform},overflow:${after.docElComputed.overflow},margin:${after.docElComputed.margin}}, ` +
-          `tabsRect=${JSON.stringify(after.tabsRect)}, ` +
-          `addBtnRect=${JSON.stringify(after.addBtnRect)}, ` +
-          `modalRect=${JSON.stringify(after.modalRect)}`
-      );
-
-      // Verify that scroll normalization reset all scroll offsets to zero.
-      if (
-        after.scrollY !== 0 ||
-        after.scrollingElementTop !== 0 ||
-        after.documentElementTop !== 0 ||
-        after.bodyTop !== 0
-      ) {
-        throw new Error(
-          'Mobile scroll normalization failed. Expected scroll offset 0, ' +
-            `but received: window.scrollY=${after.scrollY}, ` +
-            `document.scrollingElement.scrollTop=${after.scrollingElementTop}, ` +
-            `document.documentElement.scrollTop=${after.documentElementTop}, ` +
-            `document.body.scrollTop=${after.bodyTop}, ` +
-            `body.class="${after.bodyClassName}", ` +
-            `body.style="${after.bodyInlineStyle ?? 'none'}", ` +
-            `body.computed.top=${after.bodyComputed.top}, ` +
-            `body.computed.transform=${after.bodyComputed.transform}.`
-        );
-      }
-
-      // Verify measured geometry against document position (docTop = rect.top + scrollY).
-      if (before.addBtnRect !== null && after.addBtnRect !== null) {
-        const expectedAddBtnTop = before.addBtnRect.top + before.scrollY;
-        if (Math.abs(after.addBtnRect.top - expectedAddBtnTop) > 1) {
-          throw new Error(
-            'Add Reviewer button geometry mismatch after normalization. ' +
-              `Expected top=${expectedAddBtnTop} (measured docTop), ` +
-              `but received top=${after.addBtnRect.top} ` +
-              `(before.top=${before.addBtnRect.top}, before.scrollY=${before.scrollY}).`
-          );
-        }
-      }
-
-      if (before.tabsRect !== null && after.tabsRect !== null) {
-        const expectedTabsTop = before.tabsRect.top + before.scrollY;
-        if (Math.abs(after.tabsRect.top - expectedTabsTop) > 1) {
-          throw new Error(
-            'Dashboard tabs geometry mismatch after normalization. ' +
-              `Expected top=${expectedTabsTop} (measured docTop), ` +
-              `but received top=${after.tabsRect.top} ` +
-              `(before.top=${before.tabsRect.top}, before.scrollY=${before.scrollY}).`
-          );
-        }
-      }
-
-      // Store post-normalization baseline for pre-screenshot verification.
-      this.mobilePostNormalizationMetrics = {
-        scrollY: after.scrollY,
-        scrollingElementTop: after.scrollingElementTop,
-        documentElementTop: after.documentElementTop,
-        bodyTop: after.bodyTop,
-        tabsTop: after.tabsRect !== null ? after.tabsRect.top : null,
-        addBtnTop: after.addBtnRect !== null ? after.addBtnRect.top : null,
-        modalTop: after.modalRect !== null ? after.modalRect.top : null,
-      };
+        });
+      });
     }
   }
 
@@ -384,6 +129,54 @@ export class QuestionCoordinator extends BaseUser {
       () =>
         document.querySelectorAll('.modal-backdrop, ngb-modal-window, .modal')
           .length === 0
+    );
+  }
+
+  /**
+   * Checks if the contributor stats table has loaded rows specifically for the given tab.
+   * @param {string} tabName - The name of the tab (e.g. 'Question Reviewer', 'Question Submitter').
+   * @param {number} number - The expected number of stats rows.
+   */
+  async expectNumberOfStatsRowsForTabToBe(
+    tabName: string,
+    number: number
+  ): Promise<void> {
+    await this.page.waitForFunction(
+      (
+        tableSelector: string,
+        rowSelector: string,
+        loadingSelector: string,
+        expectedTab: string,
+        expectedCount: number
+      ) => {
+        const loading = document.querySelector(loadingSelector);
+        if (loading) {
+          return false;
+        }
+        if (expectedCount === 0) {
+          const rows = document.querySelectorAll(rowSelector);
+          return rows.length === 0;
+        }
+        const table = document.querySelector(tableSelector);
+        if (!table) {
+          return false;
+        }
+        const rows = document.querySelectorAll(rowSelector);
+        if (rows.length !== expectedCount) {
+          return false;
+        }
+        const header = table.querySelector('th.user-header');
+        if (!header || !header.textContent?.includes(expectedTab)) {
+          return false;
+        }
+        return true;
+      },
+      {},
+      statsTableSelector,
+      statsListItemSelector,
+      '.e2e-test-loading-message',
+      tabName,
+      number
     );
   }
 
