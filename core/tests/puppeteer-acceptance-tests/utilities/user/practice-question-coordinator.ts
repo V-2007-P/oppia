@@ -71,11 +71,48 @@ export class QuestionCoordinator extends BaseUser {
   }
 
   /**
+   * Scrolls to the top of the page, ensuring any active focused element
+   * is blurred first on mobile viewports so focus does not counteract scroll.
+   */
+  async scrollToTopOfPage(): Promise<void> {
+    if (this.isViewportAtMobileWidth()) {
+      await this.page.bringToFront();
+      await this.page.evaluate(() => {
+        if (
+          document.activeElement &&
+          typeof (document.activeElement as HTMLElement).blur === 'function'
+        ) {
+          (document.activeElement as HTMLElement).blur();
+        }
+        window.scrollTo(0, 0);
+        if (document.scrollingElement !== null) {
+          document.scrollingElement.scrollTop = 0;
+        }
+        if (document.documentElement !== null) {
+          document.documentElement.scrollTop = 0;
+        }
+        if (document.body !== null) {
+          document.body.scrollTop = 0;
+        }
+      });
+      await this.page.waitForFunction(
+        () =>
+          window.scrollY === 0 &&
+          (document.scrollingElement
+            ? document.scrollingElement.scrollTop === 0
+            : true)
+      );
+      await this.waitForPageToFullyLoad();
+      return;
+    }
+    await super.scrollToTopOfPage();
+  }
+
+  /**
    * Checks if the question role editor modal is visible and ready.
    */
   async expectQuestionRoleEditorModalToBeVisible(): Promise<void> {
     await this.expectElementToBeVisible(questionRoleEditorModalSelector);
-    await this.waitForElementToStabilize(questionRoleEditorModalSelector);
     if (this.isViewportAtMobileWidth()) {
       await this.page.bringToFront();
       await this.page.evaluate(async () => {
@@ -103,7 +140,15 @@ export class QuestionCoordinator extends BaseUser {
           });
         });
       });
+      await this.page.waitForFunction(
+        () =>
+          window.scrollY === 0 &&
+          (document.scrollingElement
+            ? document.scrollingElement.scrollTop === 0
+            : true)
+      );
     }
+    await this.waitForElementToStabilize(questionRoleEditorModalSelector);
   }
 
   /**
