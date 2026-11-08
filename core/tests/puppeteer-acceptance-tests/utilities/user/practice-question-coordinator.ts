@@ -23,6 +23,7 @@ const questionRoleEditorModalSelector =
 const checkedCheckboxSelector = '.e2e-test-checkbox-checked';
 const uncheckedCheckboxSelector = '.e2e-test-checkbox-unchecked';
 const saveButtonSelector = '.e2e-test-save-button';
+const activeModalBackdropSelector = '.modal-backdrop, ngb-modal-window, .modal';
 
 const totalQuestionReviewersSelector = '.e2e-test-total-question-reviewers';
 
@@ -69,6 +70,13 @@ export class QuestionCoordinator extends BaseUser {
   }
 
   /**
+   * Checks if the question role editor modal is visible.
+   */
+  async expectQuestionRoleEditorModalToBeVisible(): Promise<void> {
+    await this.expectElementToBeVisible(questionRoleEditorModalSelector);
+  }
+
+  /**
    * Saves and closes the question role editor modal.
    */
   async saveAndCloseQuestionRoleEditorModal(): Promise<void> {
@@ -87,6 +95,11 @@ export class QuestionCoordinator extends BaseUser {
     await saveButton.click();
 
     await this.expectElementToBeVisible(questionRoleEditorModalSelector, false);
+    await this.page.waitForFunction(
+      (selector: string) => document.querySelectorAll(selector).length === 0,
+      {},
+      activeModalBackdropSelector
+    );
   }
 
   /**
