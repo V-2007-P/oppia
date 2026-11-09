@@ -16,7 +16,6 @@
  * @fileoverview Practice Question Coordinator role utility file.
  */
 
-import puppeteer, {Page} from 'puppeteer';
 import {BaseUser} from '../common/puppeteer-utils';
 
 const questionRoleEditorModalSelector =
@@ -150,67 +149,6 @@ export class QuestionCoordinator extends BaseUser {
       );
     }
     await this.waitForElementToStabilize(questionRoleEditorModalSelector);
-  }
-
-  /**
-   * Overrides expectScreenshotToMatch to ensure mobile viewport is stabilized
-   * at the top of the page without scroll or focus drift during screenshot capture.
-   */
-  async expectScreenshotToMatch(
-    imageName: string,
-    testPath: string,
-    newPage: Page | undefined = undefined,
-    screenshotOptions: puppeteer.ScreenshotOptions = {}
-  ): Promise<void> {
-    const currentPage = typeof newPage !== 'undefined' ? newPage : this.page;
-    if (this.isViewportAtMobileWidth()) {
-      await currentPage.bringToFront();
-      await currentPage.evaluate(() => {
-        if (
-          document.activeElement &&
-          typeof (document.activeElement as HTMLElement).blur === 'function'
-        ) {
-          (document.activeElement as HTMLElement).blur();
-        }
-        window.scrollTo(0, 0);
-        if (document.scrollingElement !== null) {
-          document.scrollingElement.scrollTop = 0;
-        }
-        if (document.documentElement !== null) {
-          document.documentElement.scrollTop = 0;
-        }
-        if (document.body !== null) {
-          document.body.scrollTop = 0;
-        }
-      });
-      await currentPage.waitForFunction(
-        () =>
-          window.scrollY === 0 &&
-          (document.scrollingElement
-            ? document.scrollingElement.scrollTop === 0
-            : true)
-      );
-      const lockStyle = await currentPage.addStyleTag({
-        content: 'html, body { overflow: hidden !important; }',
-      });
-      try {
-        await super.expectScreenshotToMatch(
-          imageName,
-          testPath,
-          newPage,
-          screenshotOptions
-        );
-      } finally {
-        await currentPage.evaluate(el => el.remove(), lockStyle);
-      }
-      return;
-    }
-    await super.expectScreenshotToMatch(
-      imageName,
-      testPath,
-      newPage,
-      screenshotOptions
-    );
   }
 
   /**

@@ -85,20 +85,6 @@ describe('Practice Question Coordinator', function () {
     await questionSubmitter.navigateToCreatorDashboardPage();
   }, 900000);
 
-  afterEach(async function () {
-    // If an unexpected failure occurred while a modal was open, close any remaining modal
-    // so subsequent tests in this suite are not blocked by a lingering backdrop.
-    await questionCoordinator.page.evaluate(() => {
-      const openModals = document.querySelectorAll(
-        '.modal-backdrop, ngb-modal-window, .modal'
-      );
-      if (openModals.length > 0) {
-        openModals.forEach(el => el.remove());
-        document.body.classList.remove('modal-open');
-      }
-    });
-  });
-
   it('should be able to add question review rights for a user', async function () {
     // Navigate to the contributor dashboard admin page.
     await questionCoordinator.navigateToContributorDashboardAdminPage();
@@ -177,9 +163,6 @@ describe('Practice Question Coordinator', function () {
       'Question Reviewer',
       1
     );
-    if (questionCoordinator.isViewportAtMobileWidth()) {
-      await questionCoordinator.scrollToTopOfPage();
-    }
   });
 
   it('should be able to remove question submitter rights for a user', async function () {
