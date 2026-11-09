@@ -1942,7 +1942,14 @@ export class ExplorationEditor extends BaseUser {
     await this.clickOnElementWithSelector(addRoleDropdown);
     await this.selectMatOption('Manager (can edit permissions)');
     await this.waitForElementToStabilize(saveRoleButton);
+    const rightsResponsePromise = this.page.waitForResponse(
+      response =>
+        response.url().includes('/createhandler/rights/') &&
+        response.status() === 200,
+      {timeout: 60000}
+    );
     await this.clickOnElementWithSelector(saveRoleButton);
+    await rightsResponsePromise;
     await this.expectElementToBeVisible(saveRoleButton, false);
     await this.waitForPageToFullyLoad();
     showMessage(
@@ -1953,14 +1960,21 @@ export class ExplorationEditor extends BaseUser {
   /**
    * Verifies that the specified user is listed as a manager of the exploration.
    * @param {string} username - The expected manager username.
+   * @param {number} timeout - The maximum time to wait for the element in milliseconds.
    */
-  async expectUserToBeExplorationManager(username: string): Promise<void> {
+  async expectUserToBeExplorationManager(
+    username: string,
+    timeout: number = 60000
+  ): Promise<void> {
     if (this.isViewportAtMobileWidth()) {
       await this.expandSettingsTabSection('Roles');
     }
     await this.expectElementToBeVisible(rolesContentSelector);
     await this.expectElementToBeVisible(
-      `${ownersListSelector}:has-text("${username}")`
+      `${ownersListSelector}:has-text("${username}")`,
+      true,
+      this.page,
+      timeout
     );
     showMessage(`User ${username} is listed as a manager of this exploration.`);
   }
