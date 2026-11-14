@@ -394,6 +394,7 @@ const mobileReadyToPublishButton = '.ready-to-publish-mobile-option';
 const markAsReadyToPublishButton = '.e2e-test-mark-as-ready-to-publish-button';
 const mobileSaveStoryChangesDropdown =
   'div.navbar-mobile-options .e2e-test-mobile-changes-dropdown';
+const storyNavDropdownOptionsSelector = '.story-nav-story-nav-dropdown-options';
 const mobilePublishStoryButton =
   'div.navbar-mobile-options .e2e-test-mobile-publish-button';
 const storyNodeSelector = 'tr.story-node';
@@ -5633,12 +5634,21 @@ export class TopicManager extends BaseUser {
     await this.waitForPageToFullyLoad();
 
     if (this.isViewportAtMobileWidth()) {
-      await this.page.waitForSelector(mobileCollapsibleCardHeaderSelector);
-      const elements = await this.page.$$(mobileCollapsibleCardHeaderSelector);
-      if (elements.length < 2) {
-        throw new Error('Not enough elements collapsible headers found,');
+      const isDropdownVisible = await this.isElementVisible(
+        publishUptoChaptersDropdownSelector,
+        true,
+        1000
+      );
+      if (!isDropdownVisible) {
+        await this.page.waitForSelector(mobileCollapsibleCardHeaderSelector);
+        const elements = await this.page.$$(
+          mobileCollapsibleCardHeaderSelector
+        );
+        if (elements.length < 2) {
+          throw new Error('Not enough elements collapsible headers found,');
+        }
+        await elements[1].click();
       }
-      await elements[1].click();
     }
     await this.clickOnElementWithSelector(publishUptoChaptersDropdownSelector);
     await this.select(publishUptoChaptersDropdownSelector, dropdownValue);
@@ -5655,12 +5665,21 @@ export class TopicManager extends BaseUser {
     chapStatus: string = 'Published'
   ): Promise<void> {
     if (this.isViewportAtMobileWidth()) {
-      await this.page.waitForSelector(mobileCollapsibleCardHeaderSelector);
-      const elements = await this.page.$$(mobileCollapsibleCardHeaderSelector);
-      if (elements.length < 2) {
-        throw new Error('Not enough elements collapsible headers found,');
+      const isChapterListVisible = await this.isElementVisible(
+        storyNodeSelector,
+        true,
+        1000
+      );
+      if (!isChapterListVisible) {
+        await this.page.waitForSelector(mobileCollapsibleCardHeaderSelector);
+        const elements = await this.page.$$(
+          mobileCollapsibleCardHeaderSelector
+        );
+        if (elements.length < 2) {
+          throw new Error('Not enough elements collapsible headers found,');
+        }
+        await elements[1].click();
       }
-      await elements[1].click();
     }
     await this.page.waitForSelector(storyNodeSelector);
 
@@ -5717,7 +5736,17 @@ export class TopicManager extends BaseUser {
   ): Promise<void> {
     await this.openStoryEditor(storyName, topicName);
     await this.publishStoryDraftChapterUpto(dropdownValue);
-    await this.publishStoryDraftSerialChapter();
+    await Promise.all([
+      this.page.waitForResponse(
+        response =>
+          response.url().includes('/story_editor_handler/data/') &&
+          response.request().method() === 'PUT' &&
+          response.status() === 200
+      ),
+      this.publishStoryDraftSerialChapter(),
+    ]);
+    await this.waitForPageToFullyLoad();
+    await this.closeStoryEditorMobileNavbarOptions();
   }
 
   /**
@@ -5910,6 +5939,15 @@ export class TopicManager extends BaseUser {
   async closeStoryEditorMobileNavbarOptions(): Promise<void> {
     if (!this.isViewportAtMobileWidth()) {
       return;
+    }
+    if (
+      await this.isElementVisible(storyNavDropdownOptionsSelector, true, 1000)
+    ) {
+      await this.clickOnElementWithSelector(mobileSaveStoryChangesDropdown);
+      await this.expectElementToBeVisible(
+        storyNavDropdownOptionsSelector,
+        false
+      );
     }
     if (await this.isElementVisible(navigationContainerSelector, true, 1000)) {
       await this.clickOnElementWithSelector(mobileOptionsSelector);

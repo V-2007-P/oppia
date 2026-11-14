@@ -54,6 +54,12 @@ describe('Logged-In Learner', function () {
   let curriculumAdmin: CurriculumAdmin & ExplorationEditor & TopicManager;
   let releaseCoordinator: ReleaseCoordinator;
   const chapterIds: string[] = [];
+  const placeValueChapters = [
+    'What are the Place Values',
+    'Find the Value of a Number',
+    'Comparing Numbers',
+    'Rounding Numbers part 1',
+  ];
 
   beforeAll(async function () {
     curriculumAdmin = await UserFactory.createNewUser(
@@ -94,13 +100,6 @@ describe('Logged-In Learner', function () {
     await curriculumAdmin.createQuestionsForSkill('Place Values skills', 7);
     await curriculumAdmin.addTopicToClassroom('Math', 'Place Values');
     await curriculumAdmin.publishClassroom('Math');
-
-    const placeValueChapters = [
-      'What are the Place Values',
-      'Find the Value of a Number',
-      'Comparing Numbers',
-      'Rounding Numbers part 1',
-    ];
 
     for (const [index, chapter] of placeValueChapters.entries()) {
       const expId = await curriculumAdmin.createAndPublishExplorationWithCards(
@@ -286,11 +285,10 @@ describe('Logged-In Learner', function () {
         'Place Values',
         '3'
       );
-      await curriculumAdmin.openStoryEditor(
-        "Jamie's Adventures in the Arcade",
-        'Place Values'
+      await curriculumAdmin.expectAllListedChaptersStatus(
+        placeValueChapters,
+        'Published'
       );
-      await curriculumAdmin.waitForPageToFullyLoad();
       await curriculumAdmin.expectScreenshotToMatch(
         'allChaptersInPublishedState',
         __dirname
