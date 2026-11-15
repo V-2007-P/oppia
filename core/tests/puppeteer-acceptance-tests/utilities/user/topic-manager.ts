@@ -5683,6 +5683,58 @@ export class TopicManager extends BaseUser {
     }
     await this.page.waitForSelector(storyNodeSelector);
 
+    try {
+      await this.page.waitForFunction(
+        (
+          nodeSelector: string,
+          titleSelector: string,
+          statusSelector: string,
+          expectedTitles: string[],
+          expectedStatus: string
+        ) => {
+          const rows = Array.from(document.querySelectorAll(nodeSelector));
+          const matchedTitles = new Set<string>();
+
+          for (const row of rows) {
+            const title = row.querySelector(titleSelector)?.textContent?.trim();
+            if (title && expectedTitles.includes(title)) {
+              const status = row
+                .querySelector(statusSelector)
+                ?.textContent?.trim();
+              if (status !== expectedStatus) {
+                return false;
+              }
+              matchedTitles.add(title);
+            }
+          }
+
+          return expectedTitles.every(t => matchedTitles.has(t));
+        },
+        {timeout: 10000},
+        storyNodeSelector,
+        chapterTitleSelector,
+        chapterStatusSelector,
+        chapterNames,
+        chapStatus
+      );
+    } catch {
+      const currentStatuses = await this.page.$$eval(
+        storyNodeSelector,
+        (nodes, titleSel: string, statusSel: string) =>
+          nodes.map(node => ({
+            title: node.querySelector(titleSel)?.textContent?.trim(),
+            status: node.querySelector(statusSel)?.textContent?.trim(),
+          })),
+        chapterTitleSelector,
+        chapterStatusSelector
+      );
+      throw new Error(
+        `Timed out waiting for chapters [${chapterNames.join(', ')}] to reach ` +
+          `status "${chapStatus}". Current chapters in DOM: ` +
+          JSON.stringify(currentStatuses)
+      );
+    }
+
     const rows = await this.page.$$(storyNodeSelector);
     const found = new Set<string>();
 
