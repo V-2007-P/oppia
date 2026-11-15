@@ -46,7 +46,7 @@ const cancelUnpublishModalButton = '.e2e-test-cancel-unpublish-modal-button';
 const chapterConfirmAndUnpublishButton =
   '.e2e-test-confirm-unpublish-modal-button';
 const mobilePublishStoryButton =
-  'div.navbar-mobile-options .e2e-test-mobile-publish-button';
+  'div.navbar-mobile-options .story-nav-dropdown-option.e2e-test-mobile-publish-button';
 const publishUptoChaptersDropdownSelector =
   'select.e2e-test-publish-up-to-chapter-dropdown';
 
@@ -172,6 +172,9 @@ describe('Logged-In Learner', function () {
 
       await curriculumAdmin.publishStoryDraftSerialChapter();
 
+      await curriculumAdmin.expectElementToBeVisible(
+        cancelUnpublishModalButton
+      );
       await curriculumAdmin.expectScreenshotToMatch(
         'unpublishConfirmationPopup',
         __dirname
@@ -193,7 +196,10 @@ describe('Logged-In Learner', function () {
       );
       await curriculumAdmin.select(publishUptoChaptersDropdownSelector, '-1');
       if (curriculumAdmin.isViewportAtMobileWidth()) {
-        await curriculumAdmin.page.waitForSelector(mobilePublishStoryButton);
+        await curriculumAdmin.page.waitForSelector(
+          `${mobilePublishStoryButton}:not(.disabled)`,
+          {visible: true}
+        );
         await curriculumAdmin.clickOnElementWithSelector(
           mobilePublishStoryButton
         );
@@ -201,6 +207,9 @@ describe('Logged-In Learner', function () {
         await curriculumAdmin.waitForElementToBeClickable(publishChapterButton);
         await curriculumAdmin.clickOnElementWithSelector(publishChapterButton);
       }
+      await curriculumAdmin.expectElementToBeVisible(
+        chapterConfirmAndUnpublishButton
+      );
       await curriculumAdmin.clickOnElementWithSelector(
         chapterConfirmAndUnpublishButton
       );

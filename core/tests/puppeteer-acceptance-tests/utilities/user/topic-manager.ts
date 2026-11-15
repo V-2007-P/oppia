@@ -396,7 +396,7 @@ const mobileSaveStoryChangesDropdown =
   'div.navbar-mobile-options .e2e-test-mobile-changes-dropdown';
 const storyNavDropdownOptionsSelector = '.story-nav-story-nav-dropdown-options';
 const mobilePublishStoryButton =
-  'div.navbar-mobile-options .e2e-test-mobile-publish-button';
+  'div.navbar-mobile-options .story-nav-dropdown-option.e2e-test-mobile-publish-button';
 const storyNodeSelector = 'tr.story-node';
 const publishChapterButton = '.e2e-test-publish-chapters-button';
 const chapterStatusSelector = '.e2e-test-chapter-status';
@@ -5721,7 +5721,10 @@ export class TopicManager extends BaseUser {
         visible: true,
       });
       await this.clickOnElementWithSelector(mobileSaveStoryChangesDropdown);
-      await this.page.waitForSelector(mobilePublishStoryButton);
+      await this.page.waitForSelector(
+        `${mobilePublishStoryButton}:not(.disabled)`,
+        {visible: true}
+      );
       await this.clickOnElementWithSelector(mobilePublishStoryButton);
     } else {
       await this.waitForElementToBeClickable(publishChapterButton);
