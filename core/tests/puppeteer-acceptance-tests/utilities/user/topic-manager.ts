@@ -5650,8 +5650,60 @@ export class TopicManager extends BaseUser {
         await elements[1].click();
       }
     }
+    try {
+      await this.page.waitForFunction(
+        (selector: string, expectedVal: string) => {
+          const selectEl = document.querySelector(
+            selector
+          ) as HTMLSelectElement | null;
+          if (!selectEl) {
+            return false;
+          }
+          const option = selectEl.querySelector(
+            `option[value="${expectedVal}"]:not([disabled])`
+          ) as HTMLOptionElement | null;
+          return option !== null;
+        },
+        {timeout: 10000},
+        publishUptoChaptersDropdownSelector,
+        dropdownValue
+      );
+    } catch (error) {
+      const errorWithMessage = error as Error;
+      const newError = new Error(
+        `Option with value '${dropdownValue}' in publish-up-to dropdown was ` +
+          'not found or remained disabled within 10s. Original error: ' +
+          errorWithMessage.message
+      );
+      newError.stack = errorWithMessage.stack;
+      throw newError;
+    }
+
     await this.clickOnElementWithSelector(publishUptoChaptersDropdownSelector);
     await this.select(publishUptoChaptersDropdownSelector, dropdownValue);
+
+    try {
+      await this.page.waitForFunction(
+        (selector: string, expectedVal: string) => {
+          const selectEl = document.querySelector(
+            selector
+          ) as HTMLSelectElement | null;
+          return selectEl !== null && selectEl.value === expectedVal;
+        },
+        {timeout: 10000},
+        publishUptoChaptersDropdownSelector,
+        dropdownValue
+      );
+    } catch (error) {
+      const errorWithMessage = error as Error;
+      const newError = new Error(
+        `Publish-up-to dropdown value failed to update to '${dropdownValue}' ` +
+          'within 10s. Original error: ' +
+          errorWithMessage.message
+      );
+      newError.stack = errorWithMessage.stack;
+      throw newError;
+    }
   }
 
   /**
