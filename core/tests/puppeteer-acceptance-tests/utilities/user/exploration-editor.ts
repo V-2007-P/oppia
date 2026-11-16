@@ -3979,7 +3979,10 @@ export class ExplorationEditor extends BaseUser {
     });
     await Promise.all([
       this.clickOnElementWithSelector(confirmDiscardButton),
-      this.page.waitForNavigation({waitUntil: 'networkidle0'}),
+      this.page.waitForNavigation({
+        waitUntil: ['networkidle2', 'load'],
+        timeout: 60000,
+      }),
     ]);
     await this.waitForStaticAssetsToLoad();
     await this.expectElementToBeVisible(confirmDiscardButton, false);
