@@ -5704,6 +5704,30 @@ export class TopicManager extends BaseUser {
       newError.stack = errorWithMessage.stack;
       throw newError;
     }
+
+    if (dropdownValue !== '-1') {
+      try {
+        await this.page.waitForFunction(
+          (selector: string) => {
+            const button = document.querySelector(
+              selector
+            ) as HTMLButtonElement | null;
+            return button !== null && !button.disabled;
+          },
+          {timeout: 10000},
+          publishChapterButton
+        );
+      } catch (error) {
+        const errorWithMessage = error as Error;
+        const newError = new Error(
+          `Publish Chapters button failed to become enabled for dropdown value '${dropdownValue}' ` +
+            'within 10s. Original error: ' +
+            errorWithMessage.message
+        );
+        newError.stack = errorWithMessage.stack;
+        throw newError;
+      }
+    }
   }
 
   /**
@@ -5844,16 +5868,96 @@ export class TopicManager extends BaseUser {
     await this.openStoryEditor(storyName, topicName);
     await this.publishStoryDraftChapterUpto(dropdownValue);
     await Promise.all([
-      this.page.waitForResponse(
-        response =>
-          response.url().includes('/story_editor_handler/data/') &&
-          response.request().method() === 'PUT' &&
-          response.status() === 200
-      ),
+      this.page.waitForResponse(response => {
+        if (
+          !response.url().includes('/story_editor_handler/data/') ||
+          response.request().method() !== 'PUT' ||
+          response.status() !== 200
+        ) {
+          return false;
+        }
+        const postData = response.request().postData();
+        return (
+          postData !== undefined &&
+          postData.includes('"commit_message":"Published chapters"')
+        );
+      }),
       this.publishStoryDraftSerialChapter(),
     ]);
     await this.waitForPageToFullyLoad();
     await this.closeStoryEditorMobileNavbarOptions();
+
+    const targetIndex = Number(dropdownValue);
+    if (targetIndex >= 0) {
+      if (this.isViewportAtMobileWidth()) {
+        const isChapterListVisible = await this.isElementVisible(
+          storyNodeSelector,
+          true,
+          1000
+        );
+        if (!isChapterListVisible) {
+          await this.page.waitForSelector(mobileCollapsibleCardHeaderSelector);
+          const elements = await this.page.$$(
+            mobileCollapsibleCardHeaderSelector
+          );
+          if (elements.length >= 2) {
+            await elements[1].click();
+          }
+        }
+      }
+
+      try {
+        await this.page.waitForFunction(
+          (
+            nodeSel: string,
+            statusSel: string,
+            targetIdx: number,
+            expected: string
+          ) => {
+            const rows = document.querySelectorAll(nodeSel);
+            if (targetIdx >= rows.length) {
+              return false;
+            }
+            for (let i = 0; i <= targetIdx; i++) {
+              const status = rows[i]
+                .querySelector(statusSel)
+                ?.textContent?.trim();
+              if (status !== expected) {
+                return false;
+              }
+            }
+            return true;
+          },
+          {timeout: 15000},
+          storyNodeSelector,
+          chapterStatusSelector,
+          targetIndex,
+          'Published'
+        );
+      } catch {
+        const chapterDetails = await this.page.$$eval(
+          storyNodeSelector,
+          (rows, titleSel: string, statusSel: string) =>
+            rows.map((row, i) => ({
+              index: i,
+              title: row.querySelector(titleSel)?.textContent?.trim() || '',
+              status: row.querySelector(statusSel)?.textContent?.trim() || '',
+            })),
+          chapterTitleSelector,
+          chapterStatusSelector
+        );
+        const targetChapter = chapterDetails[targetIndex];
+        const actualStatus = targetChapter
+          ? targetChapter.status
+          : 'chapter index out of range';
+        const chapterTitle = targetChapter ? targetChapter.title : 'unknown';
+        throw new Error(
+          `Failed to publish chapter at index ${targetIndex} ("${chapterTitle}"). ` +
+            `Expected status "Published", but observed status was "${actualStatus}". ` +
+            `All chapters in DOM: ${JSON.stringify(chapterDetails)}`
+        );
+      }
+    }
   }
 
   /**
